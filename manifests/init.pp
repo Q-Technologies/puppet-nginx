@@ -40,4 +40,9 @@ class nginx (
     ensure  => true,
     enable  => true,
   }
+
+  package { 'nginx':
+    ensure  => installed,
+  }
+  
 }

@@ -123,7 +123,9 @@ server {
     location ~ \.php$ {
         fastcgi_pass   unix:/var/sockets/php_fpm.sock;
         fastcgi_index  index.php;
+<%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
+<%          } -%>
         fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
         include        fastcgi_params;
     }
@@ -183,7 +185,9 @@ server {
         include fastcgi_params;
         fastcgi_param SCRIPT_FILENAME $document_root$1;
         fastcgi_param PATH_INFO $2;
+<%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
+<%          } -%>
         fastcgi_pass   unix:/var/sockets/php_fpm.sock;
     }
 
@@ -323,6 +327,9 @@ server {
         #fastcgi_pass   127.0.0.1:9000;
         fastcgi_pass unix:/var/sockets/php_fpm.sock;
         fastcgi_index index.php;
+<%          if $config['to_ssl'] { -%>
+        fastcgi_param HTTPS on;
+<%          } -%>
         fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
         #fastcgi_param PHP_VALUE "sendmail_from=chroot@prout.com \n precision=42";
         fastcgi_param PHP_VALUE "cgi.fix_pathinfo = 0";
