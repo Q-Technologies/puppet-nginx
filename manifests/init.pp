@@ -1,6 +1,7 @@
 class nginx (
   # Class parameters are populated from module hiera data
   Data $domains = {},
+  String $web_root_parent = "/websites",
 ){
 
   $nginx_conf = "/etc/nginx"
@@ -23,7 +24,7 @@ class nginx (
       owner   => 'root',
       group   => 'root',
       mode    => '0640',
-      content => epp('nginx/vhost_conf.epp', { domain => $domain, config => $config } ),
+      content => epp('nginx/vhost_conf.epp', { domain => $domain, config => $config, web_root_parent => $web_root_parent} ),
       notify  => Service['nginx'],
     }
   }

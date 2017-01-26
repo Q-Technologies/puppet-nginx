@@ -1,48 +1,29 @@
 #
 # File Managed by Puppet
 #
-<% if $config['to_www'] and !$config['to_other'] { -%>
-# NGINX Redirection to WWW
-server {
-  server_name <%= $domain %>;
-  rewrite ^(.*) http://www.<%= $domain %>$1 <%= $config['to_www'] ? { 'temporary' => 'redirect', default => $config['to_www'] } %>;
-}
-<% } -%>
-
-<% if $config['to_ssl'] and !$config['to_other'] { -%>
+<% if $config['to_ssl'] { -%>
 # NGINX Redirection to SSL
 server {
-  server_name <%= $domain %>;
-  rewrite ^(.*) https://<%= $domain %>$1 <%= $config['to_ssl'] ? { 'temporary' => 'redirect', default => $config['to_ssl'] } %>;
-}
-<%      if $config['to_www'] { -%>
-server {
-  server_name www.<%= $domain %>;
-  rewrite ^(.*) https://www.<%= $domain %>$1 <%= $config['to_www'] ? { 'temporary' => 'redirect', default => $config['to_www'] } %>;
-}
-<%      } -%>
-<% } -%>
-
-<% if $config['to_other'] { -%>
-# NGINX Redirection to another domain
-server {
-  server_name <%= $domain %>;
-<%      if $config['to_ssl'] { -%>
-  rewrite ^(.*) https://<%= $config['destination'] %>$1 <%= $config['to_ssl'] ? { 'temporary' => 'redirect', default => $config['to_ssl'] } %>;
-<%      } else { -%>
-  rewrite ^(.*) http://<%= $config['destination'] %>$1 <%= $config['to_other'] ? { 'temporary' => 'redirect', default => $config['to_other'] } %>;
-<%      } -%>
-}
-<%      if $config['to_www'] { -%>
-server {
-  server_name www.<%= $domain %>;
-<%          if $config['to_ssl'] { -%>
-  rewrite ^(.*) https://www.<%= $config['destination'] %>$1 <%= $config['to_ssl'] ? { 'temporary' => 'redirect', default => $config['to_ssl'] } %>;
-<%          } else { -%>
-  rewrite ^(.*) http://www.<%= $config['destination'] %>$1 <%= $config['to_www'] ? { 'temporary' => 'redirect', default => $config['to_www'] } %>;
+  listen 80;
+  server_name <%= $domain %> <%= join(any2array($config['alternates']), " ") %>;
+  location / {
+    return 302 https://<%= $domain %>$request_uri;
+  }
+<%          if $config['letsencrypt'] { -%>
+  location /.well-known {
+    root /<%= $web_root_parent %>/<%= $domain %>/.well-known;
+  }
 <%          } -%>
 }
-<%      } -%>
+<% } -%>
+
+<% if !$config['to_ssl'] and $config['alternates'] { -%>
+# NGINX Redirection to main domain
+server {
+  listen 80;
+  server_name <%= join(any2array($config['alternates']), " ") %>;
+  return 302 https://<%= $domain %>$request_uri;
+}
 <% } -%>
 
 <% if $config['content'] { -%>
@@ -89,7 +70,7 @@ server {
 <%# ######                    ###### -%>
 <%# ################################ -%>
 <%# ################################ -%>
-    root /websites/<%= $domain %>/public;
+    root /<%= $web_root_parent %>/<%= $domain %>/public;
     location / {
         try_files $uri @proxy;
         access_log off;
@@ -114,7 +95,7 @@ server {
 <%# ######################### -%>
 <%# ######################### -%>
     index index.php index.html index.htm;
-    root /websites/<%= $domain %>;
+    root /<%= $web_root_parent %>/<%= $domain %>;
     location / {
         try_files $uri $uri/ /index.php;
     }
@@ -151,7 +132,7 @@ server {
     rewrite ^/carddav(.*)$ /remote.php/carddav$1 redirect;
     rewrite ^/webdav(.*)$ /remote.php/webdav$1 redirect;
 
-    root /websites/<%= $domain %>;
+    root /<%= $web_root_parent %>/<%= $domain %>;
     index index.php;
     error_page 403 /core/templates/403.php;
     error_page 404 /core/templates/404.php;
@@ -205,7 +186,7 @@ server {
 <%# ######          ###### -%>
 <%# ###################### -%>
 <%# ###################### -%>
-    root /websites/<%= $domain %>;
+    root /<%= $web_root_parent %>/<%= $domain %>;
     index index.php index.html index.htm;
 
 
@@ -275,31 +256,31 @@ server {
     # Works in sub-directory installs and also in multisite network
     # Keep logging the requests to parse later (or to pass to firewall utilities such as fail2ban)
   
-    location /websites/<%= $domain %>/system/cache/ {
+    location /<%= $web_root_parent %>/<%= $domain %>/system/cache/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
     }
 
-    location /websites/<%= $domain %>/system/logs/ {
+    location /<%= $web_root_parent %>/<%= $domain %>/system/logs/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
     }
 
-    location /websites/<%= $domain %>/image/ {
+    location /<%= $web_root_parent %>/<%= $domain %>/image/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
     }
 
-    location /websites/<%= $domain %>/image/cache/ {
+    location /<%= $web_root_parent %>/<%= $domain %>/image/cache/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
     }
 
-    location /websites/<%= $domain %>/download/ {
+    location /<%= $web_root_parent %>/<%= $domain %>/download/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
