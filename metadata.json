@@ -1,0 +1,23 @@
+{
+  "name": "qtechnologies/nginx",
+  "version": "1.0.0",
+  "author": "Q-Technologies",
+  "summary": "Puppet module to manage Nginx mostly through templates",
+  "license": "Apache-2.0",
+  "tags": ["nginx"],
+  "source": "https://github.com/Q-Technologies/puppet-nginx.git",
+  "project_page": "https://github.com/Q-Technologies/puppet-nginx",
+  "issues_url": "https://github.com/Q-Technologies/puppet-nginx/issues",
+  "dependencies": [],
+  "operatingsystem_support": [
+    {
+      "operatingsystem": "SLES",
+      "operatingsystemrelease": [ 
+        "11",
+        "12"
+     ]
+    }
+  ],
+  "data_provider": "hiera"
+}
+

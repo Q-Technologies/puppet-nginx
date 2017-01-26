@@ -1,0 +1,11 @@
+# sysstat/hiera.yaml
+---
+version: 4
+datadir: data
+hierarchy:
+  - name: "OS family"
+    backend: yaml
+    path: "%{facts.os.family}"
+
+  - name: "common"
+    backend: yaml
