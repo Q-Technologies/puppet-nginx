@@ -21,7 +21,7 @@ server {
   listen 80;
   server_name <%= join(any2array($config['alternates']), " ") %>;
   location / {
-    return 302 https://<%= $domain %>$request_uri;
+    return 302 http://<%= $domain %>$request_uri;
   }
   location /.well-known {
     root /<%= $web_root_parent %>/<%= $domain %>/;
