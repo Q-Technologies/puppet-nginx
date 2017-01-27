@@ -22,11 +22,11 @@ http {
         listen       80;
         server_name  localhost;
 
-        access_log  /var/log/nginx/default-access.log;
-        error_log  /var/log/nginx/default-error.log;
+        access_log  <%= $log_dir %>/default-access.log;
+        error_log  <%= $log_dir %>/default-error.log;
 
         location / {
-            root   /websites/default;
+            root   <%= $web_root_parent %>/default;
             index  index.html index.htm;
         }
 
@@ -55,6 +55,6 @@ http {
         #}
     }
 
-    include vhosts.d/*.conf;
+    include <%= $vhosts_conf_dir %>/*.conf;
 
 }

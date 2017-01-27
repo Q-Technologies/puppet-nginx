@@ -10,7 +10,7 @@ server {
     return 302 https://<%= $domain %>$request_uri;
   }
   location /.well-known {
-    root /<%= $web_root_parent %>/<%= $domain %>/;
+    root <%= $web_root %>/;
   }
 }
 <% } -%>
@@ -24,7 +24,7 @@ server {
     return 302 http://<%= $domain %>$request_uri;
   }
   location /.well-known {
-    root /<%= $web_root_parent %>/<%= $domain %>/;
+    root <%= $web_root %>/;
   }
 }
 <% } -%>
@@ -45,13 +45,13 @@ server {
 <%      } else { -%>
   listen       80;
   location /.well-known {
-    root /<%= $web_root_parent %>/<%= $domain %>/;
+    root <%= $web_root %>/;
   }
 <%      } -%>
   server_name <%= $domain %>;
 
-  access_log /var/log/nginx/<%= $domain %>-access_log;
-  error_log  /var/log/nginx/<%= $domain %>-error_log;
+  access_log <%= $log_dir %>/<%= $domain %>-access_log;
+  error_log  <%= $log_dir %>/<%= $domain %>-error_log;
 
 <%      if $config['to_ssl'] { -%>
     ssl                  on;
@@ -59,8 +59,8 @@ server {
     ssl_certificate      /etc/letsencrypt/live/<%= $domain %>/cert.pem;
     ssl_certificate_key  /etc/letsencrypt/live/<%= $domain %>/privkey.pem;
 <%          } else { -%>
-    ssl_certificate      /etc/nginx/certs/<%= $domain %>.crt;
-    ssl_certificate_key  /etc/nginx/certs/<%= $domain %>.key;
+    ssl_certificate      <%= $cert_dir %>/<%= $domain %>.crt;
+    ssl_certificate_key  <%= $cert_dir %>/<%= $domain %>.key;
 <%          } -%>
     ssl_session_timeout  5m;
     ssl_protocols  SSLv2 SSLv3 TLSv1;
@@ -76,7 +76,7 @@ server {
 <%# ######                    ###### -%>
 <%# ################################ -%>
 <%# ################################ -%>
-    root /<%= $web_root_parent %>/<%= $domain %>/public;
+    root <%= $web_root %>/public;
     location / {
         try_files $uri @proxy;
         access_log off;
@@ -89,7 +89,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_pass       http://unix:/var/sockets/<%= $domain %>.sock;
+        proxy_pass       http://unix:<%= $socket_dir %>/<%= $domain %>.sock;
     }
 
 <%      } elsif $config['content'] == 'php' { -%>
@@ -101,14 +101,14 @@ server {
 <%# ######################### -%>
 <%# ######################### -%>
     index index.php index.html index.htm;
-    root /<%= $web_root_parent %>/<%= $domain %>;
+    root <%= $web_root %>;
     location / {
         try_files $uri $uri/ /index.php;
     }
 
     # pass the PHP scripts to FastCGI server listening on unix socket
     location ~ \.php$ {
-        fastcgi_pass   unix:/var/sockets/<%= $domain %>.sock;
+        fastcgi_pass   unix:<%= $socket_dir %>/<%= $domain %>.sock;
         fastcgi_index  index.php;
 <%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
@@ -138,7 +138,7 @@ server {
     rewrite ^/carddav(.*)$ /remote.php/carddav$1 redirect;
     rewrite ^/webdav(.*)$ /remote.php/webdav$1 redirect;
 
-    root /<%= $web_root_parent %>/<%= $domain %>;
+    root <%= $web_root %>;
     index index.php;
     error_page 403 /core/templates/403.php;
     error_page 404 /core/templates/404.php;
@@ -175,7 +175,7 @@ server {
 <%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
 <%          } -%>
-        fastcgi_pass   unix:/var/sockets/<%= $domain %>.sock;
+        fastcgi_pass   unix:<%= $socket_dir %>/<%= $domain %>.sock;
     }
 
     # Optional: set long EXPIRES header on static assets
@@ -192,7 +192,7 @@ server {
 <%# ######          ###### -%>
 <%# ###################### -%>
 <%# ###################### -%>
-    root /<%= $web_root_parent %>/<%= $domain %>;
+    root <%= $web_root %>;
     index index.php index.html index.htm;
 
 
@@ -262,31 +262,31 @@ server {
     # Works in sub-directory installs and also in multisite network
     # Keep logging the requests to parse later (or to pass to firewall utilities such as fail2ban)
   
-    location /<%= $web_root_parent %>/<%= $domain %>/system/cache/ {
+    location /system/cache/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
     }
 
-    location /<%= $web_root_parent %>/<%= $domain %>/system/logs/ {
+    location /system/logs/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
     }
 
-    location /<%= $web_root_parent %>/<%= $domain %>/image/ {
+    location /image/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
     }
 
-    location /<%= $web_root_parent %>/<%= $domain %>/image/cache/ {
+    location /image/cache/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
     }
 
-    location /<%= $web_root_parent %>/<%= $domain %>/download/ {
+    location /download/ {
         location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
             deny all;
         }
@@ -310,15 +310,13 @@ server {
 
     location ~ \.php$ {
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        # NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
-        #fastcgi_pass   127.0.0.1:9000;
-        fastcgi_pass unix:/var/sockets/<%= $domain %>.sock;
+        fastcgi_pass unix:<%= $socket_dir %>/<%= $domain %>.sock;
         fastcgi_index index.php;
 <%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
 <%          } -%>
         fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
-        #fastcgi_param PHP_VALUE "sendmail_from=chroot@prout.com \n precision=42";
+        # NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini, or:
         fastcgi_param PHP_VALUE "cgi.fix_pathinfo = 0";
         include fastcgi_params;
     }

@@ -2,13 +2,32 @@
   "name": "qtechnologies/nginx",
   "version": "1.0.0",
   "author": "Q-Technologies",
-  "summary": "Puppet module to manage Nginx mostly through templates",
+  "summary": "Puppet module to manage standard web application configuration in Nginx",
   "license": "Apache-2.0",
-  "tags": ["nginx"],
+  "tags": ["nginx","php-fpm","opencart","psgi","perl Dancer","owncloud","php","letsencrypt","let's encrypt"],
   "source": "https://github.com/Q-Technologies/puppet-nginx.git",
   "project_page": "https://github.com/Q-Technologies/puppet-nginx",
   "issues_url": "https://github.com/Q-Technologies/puppet-nginx/issues",
-  "dependencies": [],
+  "dependencies": [
+    {
+      "name": "puppetlabs/stdlib",
+      "version_requirement": ">= 4.14.0"
+    },
+    {
+      "name": "qtechnologies/phpfpm",
+      "version_requirement": ">= 1.0.0"
+    }
+  ],
+  "requirements": [
+    {
+      "name": "pe",
+      "version_requirement": ">= 3.7.0"
+    },
+    {
+      "name": "puppet",
+      "version_requirement": ">= 4.0.0"
+    }
+  ],
   "operatingsystem_support": [
     {
       "operatingsystem": "SLES",
