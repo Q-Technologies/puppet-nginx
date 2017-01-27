@@ -4,7 +4,7 @@ class nginx (
   String $web_root_parent = "/websites",
 ){
   $nginx_conf_dir = "/etc/nginx"
-  $nginx_vhosts_conf_dir = "${nginx_conf}/vhosts.d"
+  $nginx_vhosts_conf_dir = "${nginx_conf_dir}/vhosts.d"
 
   file { "${nginx_conf_dir}":
     ensure  => directory,
