@@ -108,7 +108,7 @@ server {
 
     # pass the PHP scripts to FastCGI server listening on unix socket
     location ~ \.php$ {
-        fastcgi_pass   unix:/var/sockets/php_fpm.sock;
+        fastcgi_pass   unix:/var/sockets/<%= $domain %>.sock;
         fastcgi_index  index.php;
 <%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
@@ -175,7 +175,7 @@ server {
 <%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
 <%          } -%>
-        fastcgi_pass   unix:/var/sockets/php_fpm.sock;
+        fastcgi_pass   unix:/var/sockets/<%= $domain %>.sock;
     }
 
     # Optional: set long EXPIRES header on static assets
@@ -312,7 +312,7 @@ server {
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
         # NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini
         #fastcgi_pass   127.0.0.1:9000;
-        fastcgi_pass unix:/var/sockets/php_fpm.sock;
+        fastcgi_pass unix:/var/sockets/<%= $domain %>.sock;
         fastcgi_index index.php;
 <%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
