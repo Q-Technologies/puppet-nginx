@@ -55,7 +55,7 @@ server {
 
 <%      if $config['to_ssl'] { -%>
     ssl                  on;
-<%          if $config['letsencrypt'] { -%>
+<%          if $letsencrypt { -%>
     ssl_certificate      /etc/letsencrypt/live/<%= $domain %>/cert.pem;
     ssl_certificate_key  /etc/letsencrypt/live/<%= $domain %>/privkey.pem;
 <%          } else { -%>

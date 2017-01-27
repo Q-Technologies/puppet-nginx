@@ -21,12 +21,14 @@ class nginx (
     if $config['content'] =~ /php|owncloud|opencart/ {
       phpfpm::pool { $domain: }
     }
+    # Is letsencrypt active for this domain
+    $letsencrypt = ! empty( grep( $facts['letsencrypt_live_domains'], $domain ) )
     file { "${nginx_vhosts_conf_dir}/${domain}.conf":
       ensure  => file,
       owner   => 'root',
       group   => 'root',
       mode    => '0640',
-      content => epp('nginx/vhost_conf.epp', { domain => $domain, config => $config, web_root_parent => $web_root_parent} ),
+      content => epp('nginx/vhost_conf.epp', { domain => $domain, config => $config, web_root_parent => $web_root_parent, letsencrypt => $letsencrypt } ),
       notify  => Service['nginx'],
     }
   }

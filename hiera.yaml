@@ -1,4 +1,3 @@
-# sysstat/hiera.yaml
 ---
 version: 4
 datadir: data
