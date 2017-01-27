@@ -1,5 +1,5 @@
 ---
-nginx::conf_dir: /etc/nginx
+nginx::config_dir: /etc/nginx
 nginx::log_dir: /var/log/nginx
 nginx::socket_dir: /var/sockets
 nginx::cert_dir: /etc/nginx/certs

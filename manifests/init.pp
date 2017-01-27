@@ -1,19 +1,19 @@
 # Class to configure the NGINX web server (proxy engine)
 class nginx (
   # Class parameters are populated from module hiera data - but can be overridden by global hiera
-  String   $conf_dir,
+  String   $config_dir,
   String   $log_dir,
   String   $socket_dir,
   String   $cert_dir,
 
   # These class parameters are populated from global hiera data
-  String   $vhosts_conf_dir = "${conf_dir}/vhosts.d",
+  String   $vhosts_conf_dir = "${config_dir}/vhosts.d",
   Data     $domains         = {},
   String   $web_root_parent = '/websites',
 ){
 
   # Make sure the parent directory exist - plus manage all virtual hosts
-  file { $conf_dir:
+  file { $config_dir:
     ensure  => directory,
   } ->
   file { $vhosts_conf_dir:
@@ -23,13 +23,13 @@ class nginx (
   }
 
   # NGINX main config
-  file { "${conf_dir}/nginx.conf":
+  file { "${config_dir}/nginx.conf":
     ensure  => file,
     owner   => 'root',
     group   => 'root',
     mode    => '0640',
     notify  => Service['nginx'],
-    require => File[$conf_dir],
+    require => File[$config_dir],
     content => epp('nginx/nginx_conf.epp', {
       vhosts_conf_dir => $vhosts_conf_dir,
       log_dir         => $log_dir,
