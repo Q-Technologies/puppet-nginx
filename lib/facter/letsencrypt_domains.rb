@@ -7,6 +7,11 @@ require 'puppet'
 Facter.add("letsencrypt_live_domains") do
   confine :kernel => 'Linux'
   setcode do
-      Dir.entries("/etc/letsencrypt/live").grep(/^[^.]/)
+      dirname="/etc/letsencrypt/live"
+      if File.directory?(dirname) and File.readable?(dirname)
+          Dir.entries(dirname).grep(/^[^.]/)
+      else
+          []
+      end
   end    
 end
