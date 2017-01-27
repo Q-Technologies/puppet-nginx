@@ -3,15 +3,14 @@ class nginx (
   Data $domains = {},
   String $web_root_parent = "/websites",
 ){
+  $nginx_conf_dir = "/etc/nginx"
+  $nginx_vhosts_conf_dir = "${nginx_conf}/vhosts.d"
 
-  $nginx_conf = "/etc/nginx"
-  $nginx_vhosts_conf = "${nginx_conf}/vhosts.d"
-
-  file { "${nginx_conf}":
+  file { "${nginx_conf_dir}":
     ensure  => directory,
   }
 
-  file { "${nginx_vhosts_conf}":
+  file { "${nginx_vhosts_conf_dir}":
     ensure  => directory,
     recurse => true,
     purge   => true,
@@ -19,7 +18,10 @@ class nginx (
 
   # NGINX Virtual Host definition
   $domains.each | $domain, $config | {
-    file { "${nginx_vhosts_conf}/${domain}.conf":
+    if $config['content'] =~ /php|owncloud|opencart/ {
+      phpfpm::pool { $domain: }
+    }
+    file { "${nginx_vhosts_conf_dir}/${domain}.conf":
       ensure  => file,
       owner   => 'root',
       group   => 'root',
@@ -28,7 +30,7 @@ class nginx (
       notify  => Service['nginx'],
     }
   }
-  file { "${nginx_conf}/nginx.conf":
+  file { "${nginx_conf_dir}/nginx.conf":
     ensure  => file,
     owner   => 'root',
     group   => 'root',
