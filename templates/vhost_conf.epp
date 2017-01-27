@@ -11,7 +11,7 @@ server {
   }
 <%          if $config['letsencrypt'] { -%>
   location /.well-known {
-    root /<%= $web_root_parent %>/<%= $domain %>/.well-known;
+    root /<%= $web_root_parent %>/<%= $domain %>/;
   }
 <%          } -%>
 }
