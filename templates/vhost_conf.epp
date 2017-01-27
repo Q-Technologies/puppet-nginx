@@ -47,7 +47,6 @@ server {
   location /.well-known {
     root /<%= $web_root_parent %>/<%= $domain %>/;
   }
-}
 <%      } -%>
   server_name <%= $domain %>;
 
