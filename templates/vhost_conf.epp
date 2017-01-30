@@ -5,9 +5,9 @@
 # NGINX Redirection to SSL
 server {
   listen 80;
-  server_name <%= $domain %> <%= join(any2array($config['alternates']), " ") %>;
+  server_name <%= $web_server_name %> <%= join(any2array($config['alternates']), " ") %>;
   location / {
-    return 302 https://<%= $domain %>$request_uri;
+    return 302 https://<%= $web_server_name %>$request_uri;
   }
   location /.well-known {
     root <%= $web_root %>/;
@@ -16,12 +16,12 @@ server {
 <% } -%>
 
 <% if !$config['to_ssl'] and $config['alternates'] { -%>
-# NGINX Redirection to main domain
+# NGINX Redirection to main web_server_name
 server {
   listen 80;
   server_name <%= join(any2array($config['alternates']), " ") %>;
   location / {
-    return 302 http://<%= $domain %>$request_uri;
+    return 302 http://<%= $web_server_name %>$request_uri;
   }
   location /.well-known {
     root <%= $web_root %>/;
@@ -48,19 +48,19 @@ server {
     root <%= $web_root %>/;
   }
 <%      } -%>
-  server_name <%= $domain %>;
+  server_name <%= $web_server_name %>;
 
-  access_log <%= $log_dir %>/<%= $domain %>-access_log;
-  error_log  <%= $log_dir %>/<%= $domain %>-error_log;
+  access_log <%= $log_dir %>/<%= $web_server_name %>-access_log;
+  error_log  <%= $log_dir %>/<%= $web_server_name %>-error_log;
 
 <%      if $config['to_ssl'] { -%>
     ssl                  on;
 <%          if $letsencrypt { -%>
-    ssl_certificate      /etc/letsencrypt/live/<%= $domain %>/cert.pem;
-    ssl_certificate_key  /etc/letsencrypt/live/<%= $domain %>/privkey.pem;
+    ssl_certificate      /etc/letsencrypt/live/<%= $web_server_name %>/cert.pem;
+    ssl_certificate_key  /etc/letsencrypt/live/<%= $web_server_name %>/privkey.pem;
 <%          } else { -%>
-    ssl_certificate      <%= $cert_dir %>/<%= $domain %>.crt;
-    ssl_certificate_key  <%= $cert_dir %>/<%= $domain %>.key;
+    ssl_certificate      <%= $cert_dir %>/<%= $web_server_name %>.crt;
+    ssl_certificate_key  <%= $cert_dir %>/<%= $web_server_name %>.key;
 <%          } -%>
     ssl_session_timeout  5m;
     ssl_protocols  SSLv2 SSLv3 TLSv1;
@@ -89,7 +89,7 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_pass       http://unix:<%= $socket_dir %>/<%= $domain %>.sock;
+        proxy_pass       http://unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
     }
 
 <%      } elsif $config['content'] == 'php' { -%>
@@ -108,7 +108,7 @@ server {
 
     # pass the PHP scripts to FastCGI server listening on unix socket
     location ~ \.php$ {
-        fastcgi_pass   unix:<%= $socket_dir %>/<%= $domain %>.sock;
+        fastcgi_pass   unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
         fastcgi_index  index.php;
 <%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
@@ -175,7 +175,7 @@ server {
 <%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;
 <%          } -%>
-        fastcgi_pass   unix:<%= $socket_dir %>/<%= $domain %>.sock;
+        fastcgi_pass   unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
     }
 
     # Optional: set long EXPIRES header on static assets
@@ -310,7 +310,7 @@ server {
 
     location ~ \.php$ {
         fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        fastcgi_pass unix:<%= $socket_dir %>/<%= $domain %>.sock;
+        fastcgi_pass unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
         fastcgi_index index.php;
 <%          if $config['to_ssl'] { -%>
         fastcgi_param HTTPS on;

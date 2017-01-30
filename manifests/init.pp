@@ -7,10 +7,13 @@ class nginx (
   String   $cert_dir,
 
   # These class parameters are populated from global hiera data
-  String   $vhosts_conf_dir = "${config_dir}/vhosts.d",
-  Data     $domains         = {},
-  String   $web_root_parent = '/websites',
+  String   $vhosts_conf_dir  = "${config_dir}/vhosts.d",
+  String   $web_root_parent  = '/websites',
 ){
+  include stdlib
+
+  # Perform a hiera_hash to make sure we collect all data.  Also allow for previously used parameter name
+  $web_server_names = deep_merge( hiera_hash( 'nginx::domains', {} ), hiera_hash( 'nginx::web_server_names', {} ) )
 
   # Make sure the parent directory exist - plus manage all virtual hosts
   file { $config_dir:
@@ -38,26 +41,39 @@ class nginx (
   }
 
   # NGINX Virtual Host definition
-  $domains.each | $domain, $config | {
+  $web_server_names.each | $main_server_name, $config | {
     # Create PHP-FPM pool for PHP powered apps
     if $config['content'] =~ /php|owncloud|opencart/ {
-      phpfpm::pool { $domain:
+      phpfpm::pool { $main_server_name:
         socket_dir => $socket_dir,
         pool_ini   => $config['pool_ini'],
       }
     }
-    # Is letsencrypt active for this domain
-    $letsencrypt = ! empty( grep( $facts['letsencrypt_live_domains'], $domain ) )
 
-    # Find the web root - use the global one if it's not specified per domain
+    # Create the systemd service files to start the PSGI powered apps
+    if $config['content'] =~ /psgi/ {
+      # FIX - web_root should come from the parent data - i.e the main_server_name
+      # FIX - We should add an option to only do web_server_names marked as production as non-prod presumably 
+      #           want to be started/stopped manually.
+      if $config['psgi'].is_a(Hash) {
+        create_resources( psgi::service, { $main_server_name => $config['psgi'] }, {} )
+      } else {
+        psgi::service { $main_server_name: }
+      }
+    }
+
+    # Is letsencrypt active for this main_server_name
+    $letsencrypt = ! empty( grep( $facts['letsencrypt_live_domains'], $main_server_name ) )
+
+    # Find the web root - use the global one if it's not specified per main_server_name
     if $config['web_root'] and $config['web_root'] != '' {
       $web_root = $config['web_root']
     } else {
-      $web_root = "${web_root_parent}/${domain}"
+      $web_root = "${web_root_parent}/${main_server_name}"
     }
 
     # Write the virtual host config file from a template
-    file { "${vhosts_conf_dir}/${domain}.conf":
+    file { "${vhosts_conf_dir}/${main_server_name}.conf":
       ensure  => file,
       owner   => 'root',
       group   => 'root',
@@ -65,13 +81,13 @@ class nginx (
       notify  => Service['nginx'],
       require => File[$vhosts_conf_dir],
       content => epp('nginx/vhost_conf.epp', {
-        domain      => $domain,
-        config      => $config,
-        web_root    => $web_root,
-        log_dir     => $log_dir,
-        socket_dir  => $socket_dir,
-        cert_dir    => $cert_dir,
-        letsencrypt => $letsencrypt,
+        web_server_name => $main_server_name,
+        config          => $config,
+        web_root        => $web_root,
+        log_dir         => $log_dir,
+        socket_dir      => $socket_dir,
+        cert_dir        => $cert_dir,
+        letsencrypt     => $letsencrypt,
       } ),
     }
   }
