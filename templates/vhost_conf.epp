@@ -2,7 +2,7 @@
 # File Managed by Puppet
 #
 <% if $config['to_ssl'] { -%>
-# NGINX Redirection to SSL
+# Nginx Redirection to SSL
 server {
   listen 80;
   server_name <%= $web_server_name %> <%= join(any2array($config['alternates']), " ") %>;
@@ -16,7 +16,7 @@ server {
 <% } -%>
 
 <% if !$config['to_ssl'] and $config['alternates'] { -%>
-# NGINX Redirection to main web_server_name
+# Nginx Redirection to main web server name
 server {
   listen 80;
   server_name <%= join(any2array($config['alternates']), " ") %>;
@@ -31,13 +31,13 @@ server {
 
 <% if $config['content'] { -%>
 <%      if $config['content'] == 'psgi' { -%>
-# NGINX - Serving content as PSGI (Perl Dancer)
+# Nginx - Serving content as PSGI (Perl Dancer)
 <%      } elsif $config['content'] == 'php' { -%>
-# NGINX - Serving content as PHP using PHP-FPM
+# Nginx - Serving content as PHP using PHP-FPM
 <%      } elsif $config['content'] == 'owncloud' { -%>
-# NGINX - Serving content as PHP Owncloud using PHP-FPM
+# Nginx - Serving content as PHP Owncloud using PHP-FPM
 <%      } elsif $config['content'] == 'opencart' { -%>
-# NGINX - Serving content as PHP OpenCart Web Application using PHP-FPM
+# Nginx - Serving content as PHP OpenCart Web Application using PHP-FPM
 <%      } -%>
 server {
 <%      if $config['to_ssl'] { -%>

@@ -1,7 +1,9 @@
 #
 # File Managed by Puppet
 #
-worker_processes  1;
+worker_processes  <%= $workers %>;
+
+user <%= $user %> <%= $group %>;
 
 events {
     worker_connections  1024;

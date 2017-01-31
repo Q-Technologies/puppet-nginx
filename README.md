@@ -7,7 +7,7 @@ Some features require the inclusion of [qtechnologies/psgi](https://github.com/Q
 
 It supports Let's Encrypt to some degree ([certbot](https://certbot.eff.org/#pip-nginx)). It will look for domains in `/etc/letsencrypt/live` and configure NGINX to use these certs if it finds a matching domain. It will also make it possible for `certbot` to always do verification on port 80 (certbot won't do this on port 443).  It will also create a fact called: `letsencrypt_live_domains` which lists the domains in `/etc/letsencrypt/live`.
 
-Currently only tested on SUSE, but other platforms should work with the right hiera data.
+Currently only tested on SUSE, but other platforms should work with the right hiera data - especially regarding the user/group nginx runs as.
 
 ## Instructions
 Include this module in your preferred manner.  E.g.:
@@ -47,10 +47,17 @@ nginx::web_server_names:
       - example.com
 ```
 ### Module globals
-`nginx::web_root_parent` is where the virtual hosts (web server names) are served from unless `web_root` is specified for a specific web server name. You can also overide these defaults in hiera, if required:
+`nginx::web_root_parent` is where the virtual hosts (web server names) are served from unless `web_root` is specified for a specific web server name. You can also override these defaults in hiera, if required:
 ```yaml
+nginx::package_name: nginx
+nginx::service_name: nginx
 nginx::conf_dir: /etc/nginx
 nginx::log_dir: /var/log/nginx
+nginx::socket_dir: /var/sockets
+nginx::cert_dir: /etc/nginx/certs
+nginx::user: wwwrun
+nginx::group: www
+nginx::workers: 2
 ```
 
 ### Domains (Virtual Servers) to configure
@@ -63,8 +70,9 @@ Define a hash as `nginx::web_server_names` - this hash will be merged from acros
   * `owncloud` - proxies PHP-FPM through a UNIX socket, but with some recommended owncloud settings
   * `opencart` - proxies PHP-FPM through a UNIX socket, but with some recommended opencart settings
 * `pool_ini` - for [PHP FPM](https://github.com/Q-Technologies/puppet-phpfpm.git). It can be used to overwrite the global pool ini data.  It is merged, so you only need to specify differences.
-* `psgi` - parameters that can be passed to the [PSGI module](https://github.com/Q-Technologies/puppet-psgi.git) to override the PSGI global settings for this web server name only
+* `psgi` - parameters that can be passed to the [PSGI module](https://github.com/Q-Technologies/puppet-psgi.git) to override the PSGI global settings for this web server name only.  It is merged, so you only need to specify differences.
 * `alternates` - an array of alternate server names.  They will all redirect to the main web server name, rather than acting as alternate server names in the web server.
+* `environment` - the application code environment.  E.g. production, test, development, etc.  Currently only meaningful to PSGI apps by determining whether the service should be automatically started.  Defaults to production.
 
 ### Let's Encrypt (certbot)
 This module will not automatically configure Let's Encrypt.  You need to do it manually using instructions on [this page](https://certbot.eff.org/#pip-nginx), in short do this:

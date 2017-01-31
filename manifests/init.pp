@@ -5,6 +5,11 @@ class nginx (
   String   $log_dir,
   String   $socket_dir,
   String   $cert_dir,
+  String   $user,
+  String   $group,
+  Integer  $workers,
+  String   $package_name,
+  String   $service_name,
 
   # These class parameters are populated from global hiera data
   String   $vhosts_conf_dir  = "${config_dir}/vhosts.d",
@@ -37,40 +42,54 @@ class nginx (
       vhosts_conf_dir => $vhosts_conf_dir,
       log_dir         => $log_dir,
       web_root_parent => $web_root_parent,
+      user            => $user,
+      group           => $group,
+      workers         => $workers,
     } ),
   }
 
   # NGINX Virtual Host definition
   $web_server_names.each | $main_server_name, $config | {
-    # Create PHP-FPM pool for PHP powered apps
-    if $config['content'] =~ /php|owncloud|opencart/ {
-      phpfpm::pool { $main_server_name:
-        socket_dir => $socket_dir,
-        pool_ini   => $config['pool_ini'],
-      }
-    }
-
-    # Create the systemd service files to start the PSGI powered apps
-    if $config['content'] =~ /psgi/ {
-      # FIX - web_root should come from the parent data - i.e the main_server_name
-      # FIX - We should add an option to only do web_server_names marked as production as non-prod presumably 
-      #           want to be started/stopped manually.
-      if $config['psgi'].is_a(Hash) {
-        create_resources( psgi::service, { $main_server_name => $config['psgi'] }, {} )
-      } else {
-        psgi::service { $main_server_name: }
-      }
-    }
-
-    # Is letsencrypt active for this main_server_name
-    $letsencrypt = ! empty( grep( $facts['letsencrypt_live_domains'], $main_server_name ) )
-
     # Find the web root - use the global one if it's not specified per main_server_name
     if $config['web_root'] and $config['web_root'] != '' {
       $web_root = $config['web_root']
     } else {
       $web_root = "${web_root_parent}/${main_server_name}"
     }
+
+    # Create PHP-FPM pool for PHP powered apps
+    if $config['content'] =~ /php|owncloud|opencart/ {
+      # Direct user input should override our calculated data - keys in hashes to the right take precedence
+      $new_config = deep_merge( { user => $user, group => $group }, $config['pool_ini'] )
+      phpfpm::pool { $main_server_name:
+        socket_dir => $socket_dir,
+        pool_ini   => $new_config,
+      }
+    }
+
+    # Create the systemd service files to start the PSGI powered apps
+    if $config['content'] =~ /psgi/ {
+      if $config['environment'] == undef {
+        $environment = ''
+      } else {
+        $environment = $config['environment']
+      }
+      if $config['psgi'].is_a(Hash) {
+        # Direct user input should override our calculated data - keys in hashes to the right take precedence
+        $new_config = deep_merge( { web_root => $web_root, environment => $environment, user => $user, group => $group }, $config['psgi'] )
+        create_resources( psgi::service, { $main_server_name => $new_config }, {} )
+      } else {
+        psgi::service { $main_server_name:
+          web_root    => $web_root,
+          environment => $environment,
+          user        => $user,
+          group       => $group,
+        }
+      }
+    }
+
+    # Is letsencrypt active for this main_server_name
+    $letsencrypt = ! empty( grep( $facts['letsencrypt_live_domains'], $main_server_name ) )
 
     # Write the virtual host config file from a template
     file { "${vhosts_conf_dir}/${main_server_name}.conf":
@@ -92,12 +111,12 @@ class nginx (
     }
   }
 
-  service { 'nginx':
+  service { $service_name:
     ensure => true,
     enable => true,
   }
 
-  package { 'nginx':
+  package { $package_name:
     ensure  => installed,
   }
 

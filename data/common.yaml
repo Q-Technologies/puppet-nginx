@@ -1,5 +1,10 @@
 ---
+nginx::package_name: nginx
+nginx::service_name: nginx
 nginx::config_dir: /etc/nginx
 nginx::log_dir: /var/log/nginx
 nginx::socket_dir: /var/sockets
 nginx::cert_dir: /etc/nginx/certs
+nginx::user: wwwrun
+nginx::group: www
+nginx::workers: 2
