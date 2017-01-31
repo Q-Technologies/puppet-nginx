@@ -72,7 +72,7 @@ Define a hash as `nginx::web_server_names` - this hash will be merged from acros
 * `pool_ini` - for [PHP FPM](https://github.com/Q-Technologies/puppet-phpfpm.git). It can be used to overwrite the global pool ini data.  It is merged, so you only need to specify differences.
 * `psgi` - parameters that can be passed to the [PSGI module](https://github.com/Q-Technologies/puppet-psgi.git) to override the PSGI global settings for this web server name only.  It is merged, so you only need to specify differences.
 * `alternates` - an array of alternate server names.  They will all redirect to the main web server name, rather than acting as alternate server names in the web server.
-* `environment` - the application code environment.  E.g. production, test, development, etc.  Currently only meaningful to PSGI apps by determining whether the service should be automatically started.  Defaults to production.
+* `app_environment` - the application deployment environment.  E.g. production, test, development, etc.  Currently only meaningful to PSGI apps by determining whether the service should be automatically started.  Defaults to production.
 
 ### Let's Encrypt (certbot)
 This module will not automatically configure Let's Encrypt.  You need to do it manually using instructions on [this page](https://certbot.eff.org/#pip-nginx), in short do this:

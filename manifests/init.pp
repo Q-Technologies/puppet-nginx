@@ -69,21 +69,21 @@ class nginx (
 
     # Create the systemd service files to start the PSGI powered apps
     if $config['content'] =~ /psgi/ {
-      if $config['environment'] == undef {
-        $environment = ''
+      if $config['app_environment'] == undef {
+        $app_environment = ''
       } else {
-        $environment = $config['environment']
+        $app_environment = $config['app_environment']
       }
       if $config['psgi'].is_a(Hash) {
         # Direct user input should override our calculated data - keys in hashes to the right take precedence
-        $new_config = deep_merge( { web_root => $web_root, environment => $environment, user => $user, group => $group }, $config['psgi'] )
+        $new_config = deep_merge( { web_root => $web_root, app_environment => $app_environment, user => $user, group => $group }, $config['psgi'] )
         create_resources( psgi::service, { $main_server_name => $new_config }, {} )
       } else {
         psgi::service { $main_server_name:
-          web_root    => $web_root,
-          environment => $environment,
-          user        => $user,
-          group       => $group,
+          web_root        => $web_root,
+          app_environment => $app_environment,
+          user            => $user,
+          group           => $group,
         }
       }
     }
@@ -97,7 +97,7 @@ class nginx (
       owner   => 'root',
       group   => 'root',
       mode    => '0640',
-      notify  => Service['nginx'],
+      notify  => Service[$service_name],
       require => File[$vhosts_conf_dir],
       content => epp('nginx/vhost_conf.epp', {
         web_server_name => $main_server_name,
