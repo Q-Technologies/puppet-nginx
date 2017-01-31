@@ -8,3 +8,4 @@ nginx::cert_dir: /etc/nginx/certs
 nginx::user: wwwrun
 nginx::group: www
 nginx::workers: 2
+nginx::snh_bucket_size: 64

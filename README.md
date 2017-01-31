@@ -19,6 +19,7 @@ or
 class { 'nginx': }
 ```
 
+**NB** If you include this module, it will manage the `vhosts.d` - i.e. delete any definitions that are not in hiera.
 
 Define some hiera data like this:
 ```yaml
@@ -58,6 +59,7 @@ nginx::cert_dir: /etc/nginx/certs
 nginx::user: wwwrun
 nginx::group: www
 nginx::workers: 2
+nginx::snh_bucket_size: 64
 ```
 
 ### Domains (Virtual Servers) to configure

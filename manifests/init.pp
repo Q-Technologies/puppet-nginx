@@ -8,6 +8,7 @@ class nginx (
   String   $user,
   String   $group,
   Integer  $workers,
+  Integer  $snh_bucket_size,
   String   $package_name,
   String   $service_name,
 
@@ -45,6 +46,7 @@ class nginx (
       user            => $user,
       group           => $group,
       workers         => $workers,
+      snh_bucket_size => $snh_bucket_size,
     } ),
   }
 
