@@ -11,6 +11,7 @@ class nginx (
   Integer  $snh_bucket_size,
   String   $package_name,
   String   $service_name,
+  Integer  $def_local_proxy_port,
 
   # These class parameters are populated from global hiera data
   String   $vhosts_conf_dir  = "${config_dir}/vhosts.d",
@@ -57,6 +58,12 @@ class nginx (
       $web_root = $config['web_root']
     } else {
       $web_root = "${web_root_parent}/${main_server_name}"
+    }
+    # Find what local port we might be proxying
+    if $config['local_port'] and $config['local_port'] != '' {
+      $local_port = $config['local_port']
+    } else {
+      $local_port = $def_local_proxy_port
     }
 
     # Create PHP-FPM pool for PHP powered apps
@@ -108,6 +115,7 @@ class nginx (
         log_dir         => $log_dir,
         socket_dir      => $socket_dir,
         cert_dir        => $cert_dir,
+        local_port      => $local_port,
         letsencrypt     => $letsencrypt,
       } ),
     }

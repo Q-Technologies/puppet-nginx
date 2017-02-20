@@ -9,3 +9,4 @@ nginx::user: wwwrun
 nginx::group: www
 nginx::workers: 2
 nginx::snh_bucket_size: 64
+nginx::def_local_proxy_port: 8080
