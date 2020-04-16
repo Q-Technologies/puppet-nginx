@@ -1,5 +1,7 @@
 ---
+nginx::install_package: true
 nginx::package_name: nginx
+nginx::start_service: true
 nginx::service_name: nginx
 nginx::config_dir: /etc/nginx
 nginx::log_dir: /var/log/nginx
@@ -10,3 +12,4 @@ nginx::group: www
 nginx::workers: 2
 nginx::snh_bucket_size: 64
 nginx::def_local_proxy_port: 8080
+nginx::def_client_max_body_size: 512M

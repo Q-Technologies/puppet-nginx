@@ -19,9 +19,18 @@ http {
 
     sendfile        on;
 
-    keepalive_timeout  65;
+    keepalive_timeout  75;
 
     include conf.d/*.conf;
+
+    ssl_ciphers         EECDH+AESGCM:EDH+AESGCM:AES256+EECDH:AES256+EDH;
+    #ssl_dhparam         /etc/letsencrypt/ssl-dhparams.pem;
+    ssl_prefer_server_ciphers on;
+    ssl_protocols       TLSv1.2 TLSv1.3;
+    ssl_session_cache   shared:SSL:10m;
+    ssl_session_timeout 10m;
+    ssl_stapling on;
+    ssl_stapling_verify on;
 
     server {
         listen       80;

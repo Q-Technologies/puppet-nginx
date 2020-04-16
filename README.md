@@ -39,6 +39,9 @@ nginx::web_server_names:
       server: Twiggy
   'webmail.example.com':
     content: php
+  'javaservice.example.com':
+    content: localport
+    local_port: 8001
   'www.example.com':
     content: php
     pool_ini:
@@ -68,6 +71,7 @@ Define a hash as `nginx::web_server_names` - this hash will be merged from acros
 * `web_root` - per web server name specified web directory root.
 * `content` - psgi, php, owncloud, opencart.
   * `psgi` - proxies a PSGI application through a UNIX socket
+  * `localport` - proxies any HTTP service running on the localhost on specified port (default 8080)
   * `php` - proxies PHP-FPM through a UNIX socket
   * `owncloud` - proxies PHP-FPM through a UNIX socket, but with some recommended owncloud settings
   * `opencart` - proxies PHP-FPM through a UNIX socket, but with some recommended opencart settings

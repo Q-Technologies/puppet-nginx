@@ -10,8 +10,11 @@ class nginx (
   Integer  $workers,
   Integer  $snh_bucket_size,
   String   $package_name,
+  Boolean  $install_package,
   String   $service_name,
+  Boolean  $start_service,
   Integer  $def_local_proxy_port,
+  String   $def_client_max_body_size,
 
   # These class parameters are populated from global hiera data
   String   $vhosts_conf_dir  = "${config_dir}/vhosts.d",
@@ -65,35 +68,29 @@ class nginx (
     } else {
       $local_port = $def_local_proxy_port
     }
+    
+    # Find what local port we might be proxying
+    if $config['client_max_body_size'] and $config['client_max_body_size'] != '' {
+      $client_max_body_size = $config['client_max_body_size']
+    } else {
+      $client_max_body_size = $def_client_max_body_size
+    }
 
     # Create PHP-FPM pool for PHP powered apps
-    if $config['content'] =~ /php|owncloud|opencart/ {
+    if $config['content'] =~ /php|owncloud|opencart|dokuwiki/ {
       # Direct user input should override our calculated data - keys in hashes to the right take precedence
       $new_config = deep_merge( { user => $user, group => $group }, $config['pool_ini'] )
       phpfpm::pool { $main_server_name:
         socket_dir => $socket_dir,
         pool_ini   => $new_config,
       }
-    }
-
-    # Create the systemd service files to start the PSGI powered apps
-    if $config['content'] =~ /psgi/ {
-      if $config['app_environment'] == undef {
-        $app_environment = ''
-      } else {
-        $app_environment = $config['app_environment']
-      }
-      if $config['psgi'].is_a(Hash) {
-        # Direct user input should override our calculated data - keys in hashes to the right take precedence
-        $new_config = deep_merge( { web_root => $web_root, app_environment => $app_environment, user => $user, group => $group }, $config['psgi'] )
-        create_resources( psgi::service, { $main_server_name => $new_config }, {} )
-      } else {
-        psgi::service { $main_server_name:
-          web_root        => $web_root,
-          app_environment => $app_environment,
-          user            => $user,
-          group           => $group,
-        }
+    } elsif $config['content'] =~ /psgi/ {
+      # Create the systemd service files to start the PSGI powered apps
+      psgi::service { $main_server_name:
+        web_root        => $web_root,
+        user            => $user,
+        group           => $group,
+        options         => $config['psgi_options'],
       }
     }
 
@@ -109,25 +106,30 @@ class nginx (
       notify  => Service[$service_name],
       require => File[$vhosts_conf_dir],
       content => epp('nginx/vhost_conf.epp', {
-        web_server_name => $main_server_name,
-        config          => $config,
-        web_root        => $web_root,
-        log_dir         => $log_dir,
-        socket_dir      => $socket_dir,
-        cert_dir        => $cert_dir,
-        local_port      => $local_port,
-        letsencrypt     => $letsencrypt,
+        web_server_name      => $main_server_name,
+        config               => $config,
+        web_root             => $web_root,
+        log_dir              => $log_dir,
+        socket_dir           => $socket_dir,
+        cert_dir             => $cert_dir,
+        local_port           => $local_port,
+        letsencrypt          => $letsencrypt,
+        client_max_body_size => $client_max_body_size,
       } ),
     }
   }
 
-  service { $service_name:
-    ensure => true,
-    enable => true,
+  if $start_service {
+    service { $service_name:
+      ensure => true,
+      enable => true,
+    }
   }
 
-  package { $package_name:
-    ensure  => installed,
+  if $install_package {
+    package { $package_name:
+      ensure  => installed,
+    }
   }
 
 }

@@ -1,11 +1,19 @@
 #
 # File Managed by Puppet
 #
+
+<% if $config['content'] =~ /php|owncloud|opencart|dokuwiki/ { -%>
+# Set up the PHP Handler
+upstream php-handler-<%= $web_server_name %> {
+    server         unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
+}
+<% } -%>
+
 <% if $config['to_ssl'] { -%>
 # Nginx Redirection to SSL
 server {
   listen 80;
-  server_name <%= $web_server_name %> <%= join(any2array($config['alternates']), " ") %>;
+  server_name <%= $web_server_name %><% if !empty($config['alternates']) { %> <% } %><%= join(any2array($config['alternates']), " ") %>;
   location / {
     return 302 https://<%= $web_server_name %>$request_uri;
   }
@@ -15,24 +23,37 @@ server {
 }
 <% } -%>
 
-<% if !$config['to_ssl'] and $config['alternates'] { -%>
+<% if $config['alternates'] { -%>
 # Nginx Redirection to main web server name
 server {
+<%     if $config['to_ssl'] { -%>
+  listen       443 ssl http2;
+<%      } else { -%>
   listen 80;
+<%      } -%>
   server_name <%= join(any2array($config['alternates']), " ") %>;
   location / {
-    return 302 http://<%= $web_server_name %>$request_uri;
+    return 302 http<% if $config['to_ssl'] { %>s<% } %>://<%= $web_server_name %>$request_uri;
   }
-  location /.well-known {
-    root <%= $web_root %>/;
-  }
+<%      if $config['to_ssl'] { -%>
+<%          if $letsencrypt { -%>
+  ssl_certificate      /etc/letsencrypt/live/<%= $web_server_name %>/fullchain.pem;
+  ssl_certificate_key  /etc/letsencrypt/live/<%= $web_server_name %>/privkey.pem;
+<%          } else { -%>
+  ssl_certificate      <%= $cert_dir %>/<%= $web_server_name %>.crt;
+  ssl_certificate_key  <%= $cert_dir %>/<%= $web_server_name %>.key;
+<%          } -%>
+
+  add_header Strict-Transport-Security "max-age=31536000; includeSubdomains; preload";
+
+<%      } -%>
 }
 <% } -%>
 
 <% if $config['content'] { -%>
 <%      if $config['content'] == 'psgi' { -%>
 # Nginx - Serving content as PSGI (Perl Dancer)
-<%      } elsif $config['content'] == 'php' { -%>
+<%      } elsif $config['content'] == 'php' or $config['content'] == 'dokuwiki' { -%>
 # Nginx - Serving content as PHP using PHP-FPM
 <%      } elsif $config['content'] == 'owncloud' { -%>
 # Nginx - Serving content as PHP Owncloud using PHP-FPM
@@ -41,7 +62,7 @@ server {
 <%      } -%>
 server {
 <%      if $config['to_ssl'] { -%>
-  listen       443;
+  listen       443 ssl http2;
 <%      } else { -%>
   listen       80;
   location /.well-known {
@@ -54,18 +75,15 @@ server {
   error_log  <%= $log_dir %>/<%= $web_server_name %>-error_log;
 
 <%      if $config['to_ssl'] { -%>
-    ssl                  on;
 <%          if $letsencrypt { -%>
-    ssl_certificate      /etc/letsencrypt/live/<%= $web_server_name %>/cert.pem;
-    ssl_certificate_key  /etc/letsencrypt/live/<%= $web_server_name %>/privkey.pem;
+  ssl_certificate      /etc/letsencrypt/live/<%= $web_server_name %>/fullchain.pem;
+  ssl_certificate_key  /etc/letsencrypt/live/<%= $web_server_name %>/privkey.pem;
 <%          } else { -%>
-    ssl_certificate      <%= $cert_dir %>/<%= $web_server_name %>.crt;
-    ssl_certificate_key  <%= $cert_dir %>/<%= $web_server_name %>.key;
+  ssl_certificate      <%= $cert_dir %>/<%= $web_server_name %>.crt;
+  ssl_certificate_key  <%= $cert_dir %>/<%= $web_server_name %>.key;
 <%          } -%>
-    ssl_session_timeout  5m;
-    ssl_protocols  SSLv2 SSLv3 TLSv1;
-    ssl_ciphers  HIGH:!aNULL:!MD5;
-    ssl_prefer_server_ciphers   on;
+
+  add_header Strict-Transport-Security "max-age=31536000; includeSubdomains; preload";
 <%      } -%>
 
 <%      if $config['content'] == 'psgi' { -%>
@@ -76,21 +94,21 @@ server {
 <%# ######                    ###### -%>
 <%# ################################ -%>
 <%# ################################ -%>
-    root <%= $web_root %>/public;
-    location / {
-        try_files $uri @proxy;
-        access_log off;
-        expires max;
-    }
+  root <%= $web_root %>/public;
+  location / {
+    try_files $uri @proxy;
+    access_log off;
+    expires max;
+  }
 
-    location @proxy {
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_pass       http://unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
-    }
+  location @proxy {
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass       http://unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
+  }
 
 <%      } elsif $config['content'] == 'localport' { -%>
 <%# ################################ -%>
@@ -100,23 +118,23 @@ server {
 <%# ######                    ###### -%>
 <%# ################################ -%>
 <%# ################################ -%>
-    root <%= $web_root %>/;
-    location / {
-        try_files $uri @proxy;
-        access_log off;
-        expires max;
-    }
+  root <%= $web_root %>/;
+  location / {
+    try_files $uri @proxy;
+    access_log off;
+    expires max;
+  }
 
-    location @proxy {
-        proxy_set_header Host $http_host;
-        proxy_set_header X-Forwarded-Host $host;
-        proxy_set_header X-Real-IP $remote_addr;
-        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
-        proxy_set_header X-Forwarded-Proto $scheme;
-        proxy_pass       http://localhost:<%= $local_port %>;
-    }
+  location @proxy {
+    proxy_set_header Host $http_host;
+    proxy_set_header X-Forwarded-Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_pass       http://localhost:<%= $local_port %>;
+  }
 
-<%      } elsif $config['content'] == 'php' { -%>
+<%      } elsif $config['content'] =~ /php|dokuwiki/ { -%>
 <%# ######################### -%>
 <%# ######################### -%>
 <%# ######             ###### -%>
@@ -124,26 +142,37 @@ server {
 <%# ######             ###### -%>
 <%# ######################### -%>
 <%# ######################### -%>
-    index index.php index.html index.htm;
-    root <%= $web_root %>;
-    location / {
-        try_files $uri $uri/ /index.php;
-    }
+  index index.php index.html index.htm;
+  root <%= $web_root %>;
+<%          if $config['content'] == 'dokuwiki' { -%>
 
-    # pass the PHP scripts to FastCGI server listening on unix socket
-    location ~ \.php$ {
-        fastcgi_pass   unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
-        fastcgi_index  index.php;
-<%          if $config['to_ssl'] { -%>
-        fastcgi_param HTTPS on;
+  location ~ /(conf|bin|inc)/ {
+    deny all;
+  }
+
+  location ~ /data/ {
+    internal;
+  }
+
 <%          } -%>
-        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
-        include        fastcgi_params;
-    }
+  location / {
+    try_files $uri $uri/ /index.php;
+  }
 
-    location ~ /\.ht {
-        deny all;
-    }
+  # pass the PHP scripts to FastCGI server listening on unix socket
+  location ~ \.php$ {
+    fastcgi_pass   php-handler-<%= $web_server_name %>;
+    fastcgi_index  index.php;
+<%          if $config['to_ssl'] { -%>
+    fastcgi_param HTTPS on;
+<%          } -%>
+    fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+    include        fastcgi_params;
+  }
+
+  location ~ /\.ht {
+    deny all;
+  }
 
 <%      } elsif $config['content'] == 'owncloud' { -%>
 <%# ###################### -%>
@@ -154,60 +183,128 @@ server {
 <%# ###################### -%>
 <%# ###################### -%>
 
-    add_header Strict-Transport-Security "max-age=31536000; includeSubdomains";
-    client_max_body_size 10G; # set max upload size
-    fastcgi_buffers 64 4K;
 
-    rewrite ^/caldav(.*)$ /remote.php/caldav$1 redirect;
-    rewrite ^/carddav(.*)$ /remote.php/carddav$1 redirect;
-    rewrite ^/webdav(.*)$ /remote.php/webdav$1 redirect;
+  add_header Referrer-Policy "no-referrer" always;
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Download-Options "noopen" always;
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header X-Permitted-Cross-Domain-Policies "none" always;
+  add_header X-Robots-Tag "none" always;
+  add_header X-XSS-Protection "1; mode=block" always;
 
-    root <%= $web_root %>;
-    index index.php;
-    error_page 403 /core/templates/403.php;
-    error_page 404 /core/templates/404.php;
+  # Remove X-Powered-By, which is an information leak
+  fastcgi_hide_header X-Powered-By;
 
-    location = /robots.txt {
-        allow all;
-        log_not_found off;
-        access_log off;
-    }
+  # Path to the root of your installation
+  root <%= $web_root %>;
 
-    location ~ ^/(data|config|\.ht|db_structure\.xml|README) {
-            deny all;
-    }
+  location = /robots.txt {
+    allow all;
+    log_not_found off;
+    access_log off;
+  }
 
-    location / {
-        # The following 2 rules are only needed with webfinger
-        rewrite ^/.well-known/host-meta /public.php?service=host-meta last;
-        rewrite ^/.well-known/host-meta.json /public.php?service=host-meta-json last;
+  # The following 2 rules are only needed for the user_webfinger app.
+  # Uncomment it if you're planning to use this app.
+  #rewrite ^/.well-known/host-meta /public.php?service=host-meta last;
+  #rewrite ^/.well-known/host-meta.json /public.php?service=host-meta-json last;
 
-        rewrite ^/.well-known/carddav /remote.php/carddav/ redirect;
-        rewrite ^/.well-known/caldav /remote.php/caldav/ redirect;
+  # The following rule is only needed for the Social app.
+  # Uncomment it if you're planning to use this app.
+  #rewrite ^/.well-known/webfinger /public.php?service=webfinger last;
 
-        rewrite ^(/core/doc/[^\/]+/)$ $1/index.html;
+  location = /.well-known/carddav {
+    return 301 $scheme://$host:$server_port/remote.php/dav;
+  }
+  location = /.well-known/caldav {
+    return 301 $scheme://$host:$server_port/remote.php/dav;
+  }
 
-        try_files $uri $uri/ index.php;
-    }
+  # set max upload size
+  client_max_body_size <%= $client_max_body_size %>;
+  fastcgi_buffers 64 4K;
 
-    location ~ ^(.+?\.php)(/.*)?$ {
-        try_files $1 = 404;
+  # Enable gzip but do not remove ETag headers
+  gzip on;
+  gzip_vary on;
+  gzip_comp_level 4;
+  gzip_min_length 256;
+  gzip_proxied expired no-cache no-store private no_last_modified no_etag auth;
+  gzip_types application/atom+xml application/javascript application/json application/ld+json application/manifest+json application/rss+xml application/vnd.geo+json application/vnd.ms-fontobject application/x-font-ttf application/x-web-app-manifest+json application/xhtml+xml application/xml font/opentype image/bmp image/svg+xml image/x-icon text/cache-manifest text/css text/plain text/vcard text/vnd.rim.location.xloc text/vtt text/x-component text/x-cross-domain-policy;
 
-        include fastcgi_params;
-        fastcgi_param SCRIPT_FILENAME $document_root$1;
-        fastcgi_param PATH_INFO $2;
+  # Uncomment if your server is build with the ngx_pagespeed module
+  # This module is currently not supported.
+  #pagespeed off;
+
+  location / {
+    rewrite ^ /index.php;
+  }
+
+  location ~ ^\/(?:build|tests|config|lib|3rdparty|templates|data)\/ {
+    deny all;
+  }
+  location ~ ^\/(?:\.|autotest|occ|issue|indie|db_|console) {
+    deny all;
+  }
+
+  location ~ ^\/(?:index|remote|public|cron|core\/ajax\/update|status|ocs\/v[12]|updater\/.+|oc[ms]-provider\/.+)\.php(?:$|\/) {
+    fastcgi_split_path_info ^(.+?\.php)(\/.*|)$;
+    set $path_info $fastcgi_path_info;
+    try_files $fastcgi_script_name =404;
+    include fastcgi_params;
+    fastcgi_param SCRIPT_FILENAME $document_root$fastcgi_script_name;
+    fastcgi_param PATH_INFO $path_info;
 <%          if $config['to_ssl'] { -%>
-        fastcgi_param HTTPS on;
+    fastcgi_param HTTPS on;
 <%          } -%>
-        fastcgi_pass   unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
-    }
+    # Avoid sending the security headers twice
+    fastcgi_param modHeadersAvailable true;
+    # Enable pretty urls
+    fastcgi_param front_controller_active true;
+    fastcgi_pass php-handler-<%= $web_server_name %>;
+    fastcgi_intercept_errors on;
+    fastcgi_request_buffering off;
+  }
 
-    # Optional: set long EXPIRES header on static assets
-    location ~* ^.+\.(jpg|jpeg|gif|bmp|ico|png|css|js|swf)$ {
-        expires 30d;
-        # Optional: Don't log access to assets
-        access_log off;
-    }
+  location ~ ^\/(?:updater|oc[ms]-provider)(?:$|\/) {
+    try_files $uri/ =404;
+    index index.php;
+  }
+
+  # Adding the cache control header for js, css and map files
+  # Make sure it is BELOW the PHP block
+  location ~ \.(?:css|js|woff2?|svg|gif|map)$ {
+    try_files $uri /index.php$request_uri;
+    add_header Cache-Control "public, max-age=15778463";
+    # Add headers to serve security related headers (It is intended to
+    # have those duplicated to the ones above)
+    # Before enabling Strict-Transport-Security headers please read into
+    # this topic first.
+    #add_header Strict-Transport-Security "max-age=15768000; includeSubDomains; preload;" always;
+    #
+    # WARNING: Only add the preload option once you read about
+    # the consequences in https://hstspreload.org/. This option
+    # will add the domain to a hardcoded list that is shipped
+    # in all major browsers and getting removed from this list
+    # could take several months.
+    add_header Referrer-Policy "no-referrer" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-Download-Options "noopen" always;
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Permitted-Cross-Domain-Policies "none" always;
+    add_header X-Robots-Tag "none" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    # Optional: Don't log access to assets
+    access_log off;
+  }
+
+  location ~ \.(?:png|html|ttf|ico|jpg|jpeg|bcmap)$ {
+    try_files $uri /index.php$request_uri;
+    # Optional: Don't log access to other assets
+    access_log off;
+  }
+
 <%      } elsif $config['content'] == 'opencart' { -%>
 <%# ###################### -%>
 <%# ###################### -%>
@@ -216,134 +313,134 @@ server {
 <%# ######          ###### -%>
 <%# ###################### -%>
 <%# ###################### -%>
-    root <%= $web_root %>;
-    index index.php index.html index.htm;
+  root <%= $web_root %>;
+  index index.php index.html index.htm;
 
 
-    # Add trailing slash to */admin requests.
-    rewrite /admin$ $scheme://$host$uri/ permanent;
+  # Add trailing slash to */admin requests.
+  rewrite /admin$ $scheme://$host$uri/ permanent;
 
-    location / {
-        # This try_files directive is used to enable SEO-friendly URLs
-        # for OpenCart.
-        try_files $uri @opencart;
-    }
+  location / {
+      # This try_files directive is used to enable SEO-friendly URLs
+      # for OpenCart.
+      try_files $uri @opencart;
+  }
 
-    location @opencart {
-        rewrite ^/(.+)$ /index.php?_route_=$1 last;
-    }
+  location @opencart {
+      rewrite ^/(.+)$ /index.php?_route_=$1 last;
+  }
 
-    location /admin {
-        index index.php;
-    }
+  location /admin {
+      index index.php;
+  }
 
-    # Make sure files with the following extensions do not get loaded by nginx because nginx would display the source code, and these files can contain PASSWORDS!
-    location ~* \.(engine|inc|info|install|make|module|profile|test|po|sh|.*sql|theme|tpl(\.php)?|xtmpl)$|^(\..*|Entries.*|Repository|Root|Tag|Template)$|\.php_ {
-        deny all;
-    }
+  # Make sure files with the following extensions do not get loaded by nginx because nginx would display the source code, and these files can contain PASSWORDS!
+  location ~* \.(engine|inc|info|install|make|module|profile|test|po|sh|.*sql|theme|tpl(\.php)?|xtmpl)$|^(\..*|Entries.*|Repository|Root|Tag|Template)$|\.php_ {
+      deny all;
+  }
 
-    # Do not log access to the favicon, to keep the logs cleaner
-    location = /favicon.ico {
-        log_not_found off;
+  # Do not log access to the favicon, to keep the logs cleaner
+  location = /favicon.ico {
+      log_not_found off;
+    access_log off;
+  }
+
+  location = /apple-touch-icon.png {
+      log_not_found off;
       access_log off;
-    }
+  }
 
-    location = /apple-touch-icon.png {
-        log_not_found off;
-        access_log off;
-    }
+  location = /apple-touch-icon-precomposed.png {
+      log_not_found off;
+      access_log off;
+  }
 
-    location = /apple-touch-icon-precomposed.png {
-        log_not_found off;
-        access_log off;
-    }
+  # This block will catch static file requests, such as images, css, js
+  # The ?: prefix is a 'non-capturing' mark, meaning we do not require
+  # the pattern to be captured into $1 which should help improve performance
+  location ~* \.(?:3gp|gif|jpg|jpe?g|png|ico|wmv|avi|asf|asx|mpg|mpeg|mp4|pls|mp3|mid|wav|swf|flv|html|htm|txt|js|css|exe|zip|tar|rar|gz|tgz|bz2|uha|7z|doc|docx|xls|xlsx|pdf|iso|woff)$ {
+      # Some basic cache-control for static files to be sent to the browser
+      expires max;
+      add_header Pragma public;
+      add_header Cache-Control "public, must-revalidate, proxy-revalidate";
+  }
 
-    # This block will catch static file requests, such as images, css, js
-    # The ?: prefix is a 'non-capturing' mark, meaning we do not require
-    # the pattern to be captured into $1 which should help improve performance
-    location ~* \.(?:3gp|gif|jpg|jpe?g|png|ico|wmv|avi|asf|asx|mpg|mpeg|mp4|pls|mp3|mid|wav|swf|flv|html|htm|txt|js|css|exe|zip|tar|rar|gz|tgz|bz2|uha|7z|doc|docx|xls|xlsx|pdf|iso|woff)$ {
-        # Some basic cache-control for static files to be sent to the browser
-        expires max;
-        add_header Pragma public;
-        add_header Cache-Control "public, must-revalidate, proxy-revalidate";
-    }
+  # Deny all attempts to access hidden files such as .htaccess, .htpasswd, .DS_Store (Mac).
+  # Keep logging the requests to parse later (or to pass to firewall utilities such as fail2ban)
+  location ~ /\. {
+      access_log off;
+      log_not_found off;
+      deny all;
+  }
 
-    # Deny all attempts to access hidden files such as .htaccess, .htpasswd, .DS_Store (Mac).
-    # Keep logging the requests to parse later (or to pass to firewall utilities such as fail2ban)
-    location ~ /\. {
-        access_log off;
-        log_not_found off;
-        deny all;
-    }
+  location ~ ~$ {
+      access_log off;
+      log_not_found off;
+      deny all;
+  }
 
-    location ~ ~$ {
-        access_log off;
-        log_not_found off;
-        deny all;
-    }
+  # Deny access to any files with a .php extension in these directories
+  # Works in sub-directory installs and also in multisite network
+  # Keep logging the requests to parse later (or to pass to firewall utilities such as fail2ban)
 
-    # Deny access to any files with a .php extension in these directories
-    # Works in sub-directory installs and also in multisite network
-    # Keep logging the requests to parse later (or to pass to firewall utilities such as fail2ban)
-  
-    location /system/cache/ {
-        location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
-            deny all;
-        }
-    }
+  location /system/cache/ {
+      location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
+          deny all;
+      }
+  }
 
-    location /system/logs/ {
-        location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
-            deny all;
-        }
-    }
+  location /system/logs/ {
+      location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
+          deny all;
+      }
+  }
 
-    location /image/ {
-        location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
-            deny all;
-        }
-    }
+  location /image/ {
+      location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
+          deny all;
+      }
+  }
 
-    location /image/cache/ {
-        location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
-            deny all;
-        }
-    }
+  location /image/cache/ {
+      location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
+          deny all;
+      }
+  }
 
-    location /download/ {
-        location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
-            deny all;
-        }
-    }
+  location /download/ {
+      location ~ .*\.(php\d*|cgi|pl|phtml)?$ {
+          deny all;
+      }
+  }
 
-    # Make sure these get through
-    location = /robots.txt {
-        allow all;
-        log_not_found off;
-        access_log off;
-    }
+  # Make sure these get through
+  location = /robots.txt {
+      allow all;
+      log_not_found off;
+      access_log off;
+  }
 
-    rewrite ^/sitemap.xml$ /index.php?route=feed/google_sitemap last;
-    rewrite ^/googlebase.xml$ /index.php?route=feed/google_base last;
-    rewrite ^/download/(.*) /index.php?route=error/not_found last;
-  
-    # Fix for Firefox issue with cross site font icons
-    location ~* \.(eot|otf|ttf|woff)$ {
-        add_header Access-Control-Allow-Origin *;
-    }
+  rewrite ^/sitemap.xml$ /index.php?route=feed/google_sitemap last;
+  rewrite ^/googlebase.xml$ /index.php?route=feed/google_base last;
+  rewrite ^/download/(.*) /index.php?route=error/not_found last;
 
-    location ~ \.php$ {
-        fastcgi_split_path_info ^(.+\.php)(/.+)$;
-        fastcgi_pass unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
-        fastcgi_index index.php;
+  # Fix for Firefox issue with cross site font icons
+  location ~* \.(eot|otf|ttf|woff)$ {
+      add_header Access-Control-Allow-Origin *;
+  }
+
+  location ~ \.php$ {
+      fastcgi_split_path_info ^(.+\.php)(/.+)$;
+      fastcgi_pass php-handler-<%= $web_server_name %>;
+      fastcgi_index index.php;
 <%          if $config['to_ssl'] { -%>
-        fastcgi_param HTTPS on;
+      fastcgi_param HTTPS on;
 <%          } -%>
-        fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
-        # NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini, or:
-        fastcgi_param PHP_VALUE "cgi.fix_pathinfo = 0";
-        include fastcgi_params;
-    }
+      fastcgi_param  SCRIPT_FILENAME  $document_root$fastcgi_script_name;
+      # NOTE: You should have "cgi.fix_pathinfo = 0;" in php.ini, or:
+      fastcgi_param PHP_VALUE "cgi.fix_pathinfo = 0";
+      include fastcgi_params;
+  }
 
 <%      } -%>
 
