@@ -28,8 +28,8 @@ class nginx (
   # Make sure the parent directory exist - plus manage all virtual hosts
   file { $config_dir:
     ensure  => directory,
-  } ->
-  file { $vhosts_conf_dir:
+  }
+  -> file { $vhosts_conf_dir:
     ensure  => directory,
     recurse => true,
     purge   => true,
@@ -68,7 +68,7 @@ class nginx (
     } else {
       $local_port = $def_local_proxy_port
     }
-    
+
     # Find what local port we might be proxying
     if $config['client_max_body_size'] and $config['client_max_body_size'] != '' {
       $client_max_body_size = $config['client_max_body_size']
@@ -87,10 +87,10 @@ class nginx (
     } elsif $config['content'] =~ /psgi/ {
       # Create the systemd service files to start the PSGI powered apps
       psgi::service { $main_server_name:
-        web_root        => $web_root,
-        user            => $user,
-        group           => $group,
-        options         => $config['psgi_options'],
+        web_root => $web_root,
+        user     => $user,
+        group    => $group,
+        options  => $config['psgi_options'],
       }
     }
 
