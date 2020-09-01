@@ -9,7 +9,7 @@ Facter.add('letsencrypt_live_domains') do
   setcode do
     dirname = '/etc/letsencrypt/live'
     if File.directory?(dirname) && File.readable?(dirname)
-      Dir.entries(dirname).grep(%r{^[^.]/})
+      Dir.entries(dirname).grep(%r{^[^.]})
     else
       []
     end

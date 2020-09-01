@@ -74,6 +74,7 @@ Define a hash as `nginx::web_server_names` - this hash will be merged from acros
   * `localport` - proxies any HTTP service running on the localhost on specified port (default 8080)
   * `php` - proxies PHP-FPM through a UNIX socket
   * `owncloud` - proxies PHP-FPM through a UNIX socket, but with some recommended owncloud settings
+  * `nextcloud` - proxies PHP-FPM through a UNIX socket, but with some recommended owncloud settings
   * `opencart` - proxies PHP-FPM through a UNIX socket, but with some recommended opencart settings
 * `pool_ini` - for [PHP FPM](https://github.com/Q-Technologies/puppet-phpfpm.git). It can be used to overwrite the global pool ini data.  It is merged, so you only need to specify differences.
 * `psgi` - parameters that can be passed to the [PSGI module](https://github.com/Q-Technologies/puppet-psgi.git) to override the PSGI global settings for this web server name only.  It is merged, so you only need to specify differences.
@@ -95,6 +96,5 @@ chmod a+x certbot-auto
 But once you do this for a domain, this puppet module will detect the new certificate and configure Nginx to use it rather than any previously configured certs (presumably self-signed).
 
 ## Issues
-This module is using hiera data that is embedded in the module rather than using a params class.  This may not play nicely with other modules using the same technique unless you are using hiera 3.0.6 and above (PE 2015.3.2+).
 
 It has only been tested on SUSE systems, using SUSE paths - patches for other platforms are welcome - we just need to create internal hiera data for the OS family.

@@ -2,7 +2,7 @@
 # File Managed by Puppet
 #
 
-<% if $config['content'] =~ /php|owncloud|opencart|dokuwiki/ { -%>
+<% if $config['content'] =~ /php|(next|own)cloud|opencart|dokuwiki/ { -%>
 # Set up the PHP Handler
 upstream php-handler-<%= $web_server_name %> {
     server         unix:<%= $socket_dir %>/<%= $web_server_name %>.sock;
@@ -55,7 +55,7 @@ server {
 # Nginx - Serving content as PSGI (Perl Dancer)
 <%      } elsif $config['content'] == 'php' or $config['content'] == 'dokuwiki' { -%>
 # Nginx - Serving content as PHP using PHP-FPM
-<%      } elsif $config['content'] == 'owncloud' { -%>
+<%      } elsif $config['content'] =~ /(next|own)cloud/ { -%>
 # Nginx - Serving content as PHP Owncloud using PHP-FPM
 <%      } elsif $config['content'] == 'opencart' { -%>
 # Nginx - Serving content as PHP OpenCart Web Application using PHP-FPM
@@ -174,7 +174,7 @@ server {
     deny all;
   }
 
-<%      } elsif $config['content'] == 'owncloud' { -%>
+<%      } elsif $config['content'] =~ /(next|own)cloud/ { -%>
 <%# ###################### -%>
 <%# ###################### -%>
 <%# ######          ###### -%>
@@ -264,6 +264,7 @@ server {
     fastcgi_pass php-handler-<%= $web_server_name %>;
     fastcgi_intercept_errors on;
     fastcgi_request_buffering off;
+    fastcgi_read_timeout <%= $fastcgi_read_timeout %>;
   }
 
   location ~ ^\/(?:updater|oc[ms]-provider)(?:$|\/) {

@@ -15,6 +15,7 @@ class nginx (
   Boolean  $start_service,
   Integer  $def_local_proxy_port,
   String   $def_client_max_body_size,
+  String   $def_fastcgi_read_timeout,
 
   # These class parameters are populated from global hiera data
   String   $vhosts_conf_dir  = "${config_dir}/vhosts.d",
@@ -69,15 +70,22 @@ class nginx (
       $local_port = $def_local_proxy_port
     }
 
-    # Find what local port we might be proxying
+    # Find the client max body size
     if $config['client_max_body_size'] and $config['client_max_body_size'] != '' {
       $client_max_body_size = $config['client_max_body_size']
     } else {
       $client_max_body_size = $def_client_max_body_size
     }
 
+    # Find the fastcgi read timeout
+    if $config['fastcgi_read_timeout'] and $config['fastcgi_read_timeout'] != '' {
+      $fastcgi_read_timeout = $config['fastcgi_read_timeout']
+    } else {
+      $fastcgi_read_timeout = $def_fastcgi_read_timeout
+    }
+
     # Create PHP-FPM pool for PHP powered apps
-    if $config['content'] =~ /php|owncloud|opencart|dokuwiki/ {
+    if $config['content'] =~ /php|(next|own)cloud|opencart|dokuwiki/ {
       # Direct user input should override our calculated data - keys in hashes to the right take precedence
       $new_config = deep_merge( { user => $user, group => $group }, $config['pool_ini'] )
       phpfpm::pool { $main_server_name:
@@ -115,6 +123,7 @@ class nginx (
         local_port           => $local_port,
         letsencrypt          => $letsencrypt,
         client_max_body_size => $client_max_body_size,
+        fastcgi_read_timeout => $fastcgi_read_timeout,
       } ),
     }
   }

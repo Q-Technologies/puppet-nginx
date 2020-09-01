@@ -13,3 +13,4 @@ nginx::workers: 2
 nginx::snh_bucket_size: 64
 nginx::def_local_proxy_port: 8080
 nginx::def_client_max_body_size: 512M
+nginx::def_fastcgi_read_timeout: 60s
